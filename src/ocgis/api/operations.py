@@ -1,9 +1,9 @@
-from definition import *  # @UnusedWildImport
-from ocgis.exc import DefinitionValidationError
+from ocgis.api.parms.definition import *  # @UnusedWildImport
 from ocgis.api.interpreter import OcgInterpreter
-import inspect
-import definition
 import warnings
+from ocgis import env
+from ocgis.api.parms.base import OcgParameter
+from ocgis.conv.meta import MetaConverter
 
 
 class OcgOperations(object):
@@ -60,7 +60,7 @@ class OcgOperations(object):
     
     def __init__(self, dataset=None, spatial_operation='intersects', geom=None, aggregate=False,
                  calc=None, calc_grouping=None, calc_raw=False, abstraction='polygon',
-                 snippet=False, backend='ocg', prefix=None,
+                 snippet=False, backend='ocg', prefix=env.PREFIX,
                  output_format='numpy', agg_selection=False, select_ugid=None, 
                  vector_wrap=True, allow_empty=False):
         
@@ -70,7 +70,6 @@ class OcgOperations(object):
         
         self.dataset = Dataset(dataset)
         self.spatial_operation = SpatialOperation(spatial_operation)
-        self.geom = Geom(geom)
         self.aggregate = Aggregate(aggregate)
         self.calc = Calc(calc)
         self.calc_grouping = CalcGrouping(calc_grouping)
@@ -82,12 +81,13 @@ class OcgOperations(object):
         self.output_format = OutputFormat(output_format)
         self.agg_selection = AggregateSelection(agg_selection)
         self.select_ugid = SelectUgid(select_ugid)
+        self.geom = Geom(geom,select_ugid=self.select_ugid)
         self.vector_wrap = VectorWrap(vector_wrap)
         self.allow_empty = AllowEmpty(allow_empty)
         
         ## these values are left in to perhaps be added back in at a later date.
         self.output_grouping = None
-        self.request_url = RequestUrl(None)
+        self.request_url = None
         
         # # Initial values have been set and global validation should now occur
         # # when any parameters are updated.
@@ -123,6 +123,19 @@ class OcgOperations(object):
         if self._is_init is False:
             self._validate_()
             
+#    def __getstate__(self):
+#        import ipdb;ipdb.set_trace()
+#        state = self.as_dict()
+#        return(state)
+#    
+#    def __setstate__(self,state):
+#        import ipdb;ipdb.set_trace()
+    
+    def get_meta(self):
+        meta_converter = MetaConverter(self)
+        rows = meta_converter.get_rows()
+        return('\n'.join(rows))
+    
     @classmethod
     def parse_query(cls, query):
         # # TODO: hack

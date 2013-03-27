@@ -43,7 +43,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'OpenClimateGIS'
-copyright = u'2013, Ben Koziol, Tyler Erickson, K. Arthur Endsley'
+copyright = (u'2013, University of Michigan-Ann Arbor, Michigan Technological University, University of Colorado-Boulder')
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

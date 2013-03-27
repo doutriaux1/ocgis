@@ -5,9 +5,26 @@ from ocgis.api.operations import OcgOperations
 from nose.plugins.skip import SkipTest
 from datetime import datetime as dt
 from ocgis.api.dataset.collection.iterators import MeltedIterator, KeyedIterator
+from ocgis import env
+import tempfile
+import shutil
+import ocgis
+import datetime
 
 
 class Test(unittest.TestCase):
+    
+    @classmethod
+    def setUpClass(cls):
+        env.DIR_OUTPUT = tempfile.mkdtemp(prefix='ocgis_test_',dir=env.DIR_OUTPUT)
+        env.OVERWRITE = True
+        
+    @classmethod
+    def tearDownClass(cls):
+        try:
+            shutil.rmtree(env.DIR_OUTPUT)
+        finally:
+            env.reset()
     
     @property
     def tasmax(self):
@@ -46,7 +63,7 @@ class Test(unittest.TestCase):
         
     def test_HeatIndex_keyed_output(self):
         ds = [self.tasmax,self.rhsmax]
-        calc = {'func':'heat_index','name':'heat_index','kwds':{'tas':'tasmax','rhs':'rhsmax','units':'k'}}
+        calc = [{'func':'heat_index','name':'heat_index','kwds':{'tas':'tasmax','rhs':'rhsmax','units':'k'}}]
         ops = OcgOperations(dataset=ds,calc=calc,snippet=False,output_format='numpy')
         self.assertEqual(ops.calc_grouping,None)
         ret = ops.execute()
@@ -78,7 +95,61 @@ class Test(unittest.TestCase):
         
         mean = library.Mean(values=values,agg=agg,weights=weights,groups=groups)
         ret = mean.calculate()
-
+        
+    def test_computational_nc_output(self):
+        kwds = self.tasmax
+        kwds['time_range'] = [datetime.datetime(2011,1,1),
+                              datetime.datetime(2011,12,31)]
+        rd = ocgis.RequestDataset(**kwds)
+        calc = [{'func':'mean','name':'tasmax_mean'}]
+        calc_grouping = ['month','year']
+        ops = ocgis.OcgOperations(rd,calc=calc,calc_grouping=calc_grouping)
+        ret = ops.execute()
+        tasmax = ret[1].variables['tasmax']
+        date_centroid = tasmax.temporal_group.date_centroid
+        ops = ocgis.OcgOperations(rd,calc=calc,calc_grouping=calc_grouping,
+                                  output_format='nc')
+        ret = ops.execute()
+        ip = ocgis.Inspect(ret,variable='n')
+        
+    def test_frequency_percentiles(self):
+        ## data comes in as 4-dimensional array. (time,level,row,column)
+        
+        perc = 0.95
+        round_method = 'ceil' #floor
+        
+        ## generate gaussian sequence
+        np.random.seed(1)
+        seq = np.random.normal(size=(31,1,2,2))
+        seq = np.ma.array(seq,mask=False)
+        ## sort the data
+        cseq = seq.copy()
+        cseq.sort(axis=0)
+        ## reference the time vector length
+        n = cseq.shape[0]
+        ## calculate the index
+        idx = getattr(np,round_method)(perc*n)
+        ## get the percentiles
+        ret = cseq[idx,:,:,:]
+        self.assertAlmostEqual(7.2835104624617717,ret.sum())
+        
+        ## generate gaussian sequence
+        np.random.seed(1)
+        seq = np.random.normal(size=(31,1,2,2))
+        mask = np.zeros((31,1,2,2))
+        mask[:,:,1,1] = True
+        seq = np.ma.array(seq,mask=mask)
+        ## sort the data
+        cseq = seq.copy()
+        cseq.sort(axis=0)
+        ## reference the time vector length
+        n = cseq.shape[0]
+        ## calculate the index
+        idx = getattr(np,round_method)(perc*n)
+        ## get the percentiles
+        ret = cseq[idx,:,:,:]
+        self.assertAlmostEqual(5.1832553259829295,ret.sum())
+        
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']

@@ -19,7 +19,7 @@ class GlobalInterface(object):
         self.target_var = target_var
         self._meta = NcMetadata(rootgrp)
         self._dim_map = self._get_dimension_map_(rootgrp)
-        
+
         interfaces = [LevelInterface,TemporalInterface,RowInterface,ColumnInterface]
         for interface in interfaces:
             try:

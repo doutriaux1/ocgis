@@ -8,6 +8,9 @@ from shapely.geometry.polygon import Polygon
 from ocgis import env
 from ocgis.api.interpreter import OcgInterpreter
 from ocgis.util.inspect import Inspect
+import tempfile
+import shutil
+import os
 
 
 class NcSpatial(object):
@@ -48,6 +51,18 @@ class NcSpatial(object):
 
 
 class Test360(unittest.TestCase):
+    
+    @classmethod
+    def setUpClass(cls):
+        env.DIR_OUTPUT = tempfile.mkdtemp(prefix='ocgis_test_',dir=env.DIR_OUTPUT)
+        env.OVERWRITE = True
+        
+    @classmethod
+    def tearDownClass(cls):
+        try:
+            shutil.rmtree(env.DIR_OUTPUT)
+        finally:
+            env.reset()
     
     def test_high_res(self):
         nc_spatial = NcSpatial(0.5,(-90.0,90.0),(0.0,360.0))
@@ -105,7 +120,7 @@ class Test360(unittest.TestCase):
         return(var)
 
     def make_data(self,nc_spatial):
-        path = '/tmp/test360 {0}.nc'.format(datetime.now())
+        path = os.path.join(env.DIR_OUTPUT,'test360 {0}.nc'.format(datetime.now()))
 
         calendar = 'standard'
         units = 'days since 0000-01-01'

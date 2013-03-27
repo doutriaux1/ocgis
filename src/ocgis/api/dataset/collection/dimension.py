@@ -142,14 +142,9 @@ class TemporalDimension(OcgDimension):
     
     def group(self,*args):
         '''
-        ('month',2)
         (['month','year'])
         '''
-        if len(args) == 2:
-            new_value,new_bounds,dgroups = self._group_part_count_(*args)
-        else:
-            new_value,new_bounds,dgroups = self._group_part_(*args)
-        
+        new_value,new_bounds,dgroups = self._group_part_(*args)
         return(TemporalGroupDimension(new_value,new_bounds,dgroups,args[0]))
     
     def _group_part_(self,groups):
@@ -223,6 +218,16 @@ class TemporalGroupDimension(OcgDimension):
     @property
     def shape(self):
         return(self._value.shape)
+    @property
+    def date_centroid(self):
+        ret = np.empty(len(self),dtype=object).reshape(-1,1)
+        bounds = self.bounds
+        for idx in range(len(self)):
+            lower = bounds[idx,0]
+            upper = bounds[idx,1]
+            delta = (upper - lower)/2
+            ret[idx] = lower + delta
+        return(ret)
     
     def __len__(self):
         return(self.value.shape[0])
